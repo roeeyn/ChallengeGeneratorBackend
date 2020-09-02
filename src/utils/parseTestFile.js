@@ -1,98 +1,84 @@
-module.exports.parseTest = originalTestLine => testExpression => jestTestVerb => {
-  const getParamsExpression = /\(.*,*\)/;
-
-  const originalTest = `${originalTestLine.match(testExpression)}`;
-  if (originalTest === "") {
-    // no occurrences found
-    return originalTestLine;
+class Test {
+  static mainParse(fnName, fnParam, expectedValue, testVerb) {
+    return `test("Testing main function", () => expect(${fnName}(${fnParam})).${testVerb}(${expectedValue}))`;
   }
 
-  const testSignature = `${originalTest.match(getParamsExpression)}`;
-  // For now, this is the best effort for getting the params
-  // it may be not much, but it's honest work LOL
-  const [funcExec, expectedResult] = testSignature
-    .substring(1, testSignature.length)
-    .split(",");
-
-  if (funcExec && expectedResult) {
-    const jestTest = `test("TESTING main fun", () => expect(${funcExec.trim()}).${jestTestVerb}(${expectedResult.trim()});`;
-    return originalTestLine.replace(originalTest, jestTest);
+  static assertEquals([fnName, fnParam], expectedValue, testVerb) {
+    return this.mainParse(
+      fnName,
+      fnParam ? JSON.stringify(fnParam) : "",
+      JSON.stringify(expectedValue),
+      "toBe"
+    );
   }
 
+  static assertSimilar([fnName, fnParam], expectedValue, testVerb) {
+    return this.mainParse(
+      fnName,
+      fnParam ? JSON.stringify(fnParam) : "",
+      JSON.stringify(expectedValue),
+      "toStrictEqual"
+    );
+  }
+
+  static assertNotEquals([fnName, fnParam], expectedValue, testVerb) {
+    return this.mainParse(
+      fnName,
+      fnParam ? JSON.stringify(fnParam) : "",
+      JSON.stringify(expectedValue),
+      "not.toBe"
+    );
+  }
+
+  static expect([fnName, fnParam], expectedValue, testVerb) {
+    return this.mainParse(
+      fnName,
+      fnParam ? JSON.stringify(fnParam) : "",
+      JSON.stringify(expectedValue),
+      "toBeTruthy"
+    );
+  }
+
+  static assertDeepEquals([fnName, fnParam], expectedValue, testVerb) {
+    return this.mainParse(
+      fnName,
+      fnParam ? JSON.stringify(fnParam) : "",
+      JSON.stringify(expectedValue),
+      "toMatchObject"
+    );
+  }
+
+  static expectError(expectedValue, [fnName, fnParam], testVerb) {
+    return this.mainParse(
+      fnName,
+      fnParam ? JSON.stringify(fnParam) : "",
+      JSON.stringify(expectedValue),
+      "toThrow"
+    );
+  }
+
+  static expectNoError(expectedValue, [fnName, fnParam], testVerb) {
+    return this.mainParse(
+      fnName,
+      fnParam ? JSON.stringify(fnParam) : "",
+      JSON.stringify(expectedValue),
+      "not.toThrow"
+    );
+  }
+}
+
+module.exports.parseTest = (originalTestLine, testFnName) => {
+  const validatorExpression = /Test\..*\(.*\);?/;
+
+  if (validatorExpression.test(originalTestLine)) {
+    const extractedTest = originalTestLine.match(validatorExpression)[0];
+    const parsedTest = eval(`
+      const ${testFnName} = params => ["${testFnName}", params];
+      ${extractedTest}
+    `);
+    return originalTestLine.replace(extractedTest, parsedTest);
+  }
+
+  // no occurrences found
   return originalTestLine;
 };
-
-module.exports.parseAssertEquals = originalTestLine =>
-  module.exports.parseTest(originalTestLine)(/Test\.assertEquals\(.*,*\)/)(
-    "toBe"
-  );
-
-module.exports.parseAssertSimilar = originalTestLine =>
-  module.exports.parseTest(originalTestLine)(/Test\.assertSimilar\(.*,*\)/)(
-    "toStrictEqual"
-  );
-
-module.exports.parseAssertNotEquals = originalTestLine =>
-  module.exports.parseTest(originalTestLine)(/Test\.assertNotEquals\(.*,*\)/)(
-    "not.toBe"
-  );
-
-module.exports.parseExpect = originalTestLine =>
-  module.exports.parseTest(originalTestLine)(/Test\.expect\(.*,*\)/)(
-    "toBeTruthy"
-  );
-
-module.exports.parseExpectError = originalTestLine => {
-  const getParamsExpression = /\(.*,*\)/;
-
-  const originalTest = `${originalTestLine.match(/Test\.expectError\(.*,*\)/)}`;
-  if (originalTest === "") {
-    // no occurrences found
-    return originalTestLine;
-  }
-
-  const testSignature = `${originalTest.match(getParamsExpression)}`;
-  // For now, this is the best effort for getting the params
-  // it may be not much, but it's honest work LOL
-  const [funcExec, expectedResult] = testSignature
-    .substring(1, testSignature.length)
-    .split(",");
-
-  if (funcExec && expectedResult) {
-    const jestTest = `test("TESTING main fun", () => expect(${funcExec.trim()}).toThrow}(${expectedResult.trim()});`;
-    return originalTestLine.replace(originalTest, jestTest);
-  }
-
-  return originalTestLine;
-};
-
-module.exports.parseExpectNoError = originalTestLine => {
-  const getParamsExpression = /\(.*,*\)/;
-
-  const originalTest = `${originalTestLine.match(
-    /Test\.expectNoError\(.*,*\)/
-  )}`;
-  if (originalTest === "") {
-    // no occurrences found
-    return originalTestLine;
-  }
-
-  const testSignature = `${originalTest.match(getParamsExpression)}`;
-  // For now, this is the best effort for getting the params
-  // it may be not much, but it's honest work LOL
-  const [funcExec, expectedResult] = testSignature
-    .substring(1, testSignature.length)
-    .split(",");
-
-  if (funcExec && expectedResult) {
-    const jestTest = `test("TESTING main fun", () => expect(${funcExec.trim()}).not.toThrow}(${expectedResult.trim()});`;
-    return originalTestLine.replace(originalTest, jestTest);
-  }
-
-  return originalTestLine;
-};
-
-module.exports.parseAssertDeepEquals = originalTestLine =>
-  module.exports.parseTest(originalTestLine)(/Test\.assertDeepEquals\(.*,*\)/)(
-    "toMatchObject"
-  );

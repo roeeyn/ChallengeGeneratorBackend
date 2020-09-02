@@ -1,15 +1,7 @@
 const fs = require("fs");
 const TurndownService = require("turndown");
 
-const {
-  parseExpect,
-  parseExpectError,
-  parseExpectNoError,
-  parseAssertEquals,
-  parseAssertSimilar,
-  parseAssertNotEquals,
-  parseAssertDeepEquals,
-} = require("./parseTestFile.js");
+const { parseTest } = require("./parseTestFile.js");
 
 const html2md = (html, challengeNumber) => {
   const turndownService = new TurndownService();
@@ -36,19 +28,14 @@ module.exports.parseTests = (tests, fnNames, challengeNumber) => {
     ", "
   )} } = require("./challenge${challengeNumber + 1}.js");`;
   const originalTests = tests.join("\n//");
-  const testFns = [
-    parseExpect,
-    parseExpectError,
-    parseExpectNoError,
-    parseAssertEquals,
-    parseAssertSimilar,
-    parseAssertNotEquals,
-    parseAssertDeepEquals,
-  ];
-  const parsedTests = testFns
-    .reduce((carry, testFn) => {
-      return carry.map(testLine => testFn(testLine));
-    }, tests)
+
+  const parsedTests = tests
+    .map(testLine =>
+      parseTest(
+        testLine,
+        fnNames.find(fnName => testLine.includes(fnName))
+      )
+    )
     .join("\n");
 
   const message1 = `/////////// THIS ARE THE ORIGINAL TESTS, THEY WONT RUN WITH JEST //////////////\n`;
