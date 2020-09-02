@@ -72,11 +72,15 @@ module.exports.parseTest = (originalTestLine, testFnName) => {
 
   if (validatorExpression.test(originalTestLine)) {
     const extractedTest = originalTestLine.match(validatorExpression)[0];
-    const parsedTest = eval(`
+    try {
+      const parsedTest = eval(`
       const ${testFnName} = params => ["${testFnName}", params];
       ${extractedTest}
     `);
-    return originalTestLine.replace(extractedTest, parsedTest);
+      return originalTestLine.replace(extractedTest, parsedTest);
+    } catch (e) {
+      return `!.!${originalTestLine}`;
+    }
   }
 
   // no occurrences found
